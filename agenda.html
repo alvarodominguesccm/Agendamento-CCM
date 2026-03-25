@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento ADVBOX</title>
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+    <style>
+        /* --- TEMA GERAL --- */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            background-color: #333;
+            color: #333;
+        }
+
+        /* --- CONTAINERS (Formulário e Calendário) --- */
+        .card-container {
+            max-width: 900px;
+            margin: 0 auto 25px auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            text-align: center;
+            color: #343a40;
+            font-weight: 800;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+
+        /* --- ESTILOS DO FORMULÁRIO --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 700;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #228be6;
+            box-shadow: 0 0 0 3px rgba(34, 139, 230, 0.15);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Botões de Rádio customizados */
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .radio-label input[type="radio"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+            accent-color: #228be6;
+        }
+
+        /* --- CABEÇALHO E GRELHA DO CALENDÁRIO --- */
+        .fc-col-header-cell-cushion {
+            color: #495057;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+            padding: 15px 0 !important;
+        }
+
+        .fc-theme-standard td,
+        .fc-theme-standard th { border-color: #e9ecef; }
+
+        .fc-timegrid-slot-label-cushion { color: #adb5bd; font-weight: 600; font-size: 0.85em; }
+
+        /* --- ÁREAS CLICÁVEIS (Vazias) --- */
+        .fc-timegrid-slot-lane { cursor: pointer; transition: all 0.3s ease; }
+        .fc-timegrid-slot-lane:hover {
+            background-color: #e7f5ff !important;
+            box-shadow: inset 0 0 0 1px #a5d8ff;
+        }
+
+        /* --- ESTILIZAÇÃO DO EVENTO "OCUPADO" --- */
+        .fc-event {
+            background: transparent !important; border: none !important;
+            box-shadow: none !important; cursor: not-allowed !important;
+        }
+
+        .fc-timegrid-event-harness { padding-bottom: 3px; z-index: 5; }
+
+        .ocupado-badge {
+            background-color: rgba(52, 58, 64, 0.96); color: #f8f9fa; border-radius: 6px;
+            border-left: 4px solid #212529; width: 100%; height: 100%; box-sizing: border-box;
+            padding: 0 10px; display: flex; align-items: center; font-weight: 600; font-size: 0.8em;
+            text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+        .ocupado-badge::before { content: '🔒'; margin-right: 6px; font-size: 1.1em; opacity: 0.8; }
+
+        .badge-almoco { background-color: #e9ecef; color: #495057; border-left: 4px solid #ced4da; }
+        .badge-almoco::before { content: '🍽️'; }
+
+        /* --- MODAL DE CONFIRMAÇÃO --- */
+        #modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            z-index: 1000; border-radius: 16px; width: 360px; text-align: center;
+        }
+
+        #overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 999; backdrop-filter: blur(4px);
+        }
+
+        button {
+            padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 700; margin: 10px 5px 0 5px; transition: 0.2s; font-size: 1em;
+        }
+
+        .btn-confirm { background: #228be6; color: white; box-shadow: 0 4px 12px rgba(34, 139, 230, 0.3); }
+        .btn-confirm:hover { background: #1c7ed6; transform: translateY(-1px); }
+        .btn-cancel { background: #f1f3f5; color: #495057; }
+        .btn-cancel:hover { background: #e9ecef; }
+
+        /* --- POPUP (TOAST) --- */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #343a40; color: #fff;
+            text-align: center; border-radius: 8px; padding: 14px 20px; position: fixed;
+            z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-size: 0.95em; font-weight: 600; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0; transition: opacity 0.3s, bottom 0.3s;
+        }
+
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+
+<body>
+
+    <div class="card-container">
+        <h2>Passo 1: Seus Dados</h2>
+
+        <div class="form-group">
+            <label class="form-label">Você já é nosso cliente?</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="ja_cliente" value="Sim" onchange="alternarCPF()"> Sim
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="ja_cliente" value="Não" onchange="alternarCPF()"> Não, sou cliente novo
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group" id="grupo_cpf" style="display: none; margin-top: 15px;">
+            <label class="form-label" for="cpf">Informe seu CPF para localizarmos seu processo:</label>
+            <input type="text" id="cpf" class="form-control" placeholder="000.000.000-00" maxlength="14" oninput="mascaraCPF(this)">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="demanda">Qual a área da sua demanda?</label>
+            <select id="demanda" class="form-control">
+                <option value="">-- Selecione uma opção --</option>
+                <option value="Previdenciário">Previdenciário (INSS, Aposentadorias...)</option>
+                <option value="Trabalhista">Trabalhista</option>
+                <option value="Cível">Cível / Indenizações</option>
+                <option value="Família">Direito de Família</option>
+                <option value="Criminal">Criminal</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="relato">Descreva brevemente o seu caso (Relato):</label>
+            <textarea id="relato" class="form-control" placeholder="Ex: Gostaria de dar entrada na minha aposentadoria..."></textarea>
+        </div>
+    </div>
+
+    <div class="card-container">
+        <h2>Passo 2: Escolha o Horário</h2>
+        <div id='calendar'></div>
+    </div>
+
+    <div id="overlay"></div>
+    <div id="modal">
+        <h3 style="margin-top:0; color: #343a40; font-size: 1.4em;">Confirmar Agendamento?</h3>
+
+        <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.9em; color: #495057; margin-bottom: 15px;">
+            <p style="margin: 0 0 5px 0;"><strong>Demanda:</strong> <span id="resumo-demanda"></span></p>
+            <p style="margin: 0;"><strong>Horário:</strong></p>
+            <p id="data-selecionada" style="font-size: 1.1em; color: #228be6; font-weight: bold; margin: 5px 0 0 0;"></p>
+        </div>
+
+        <button class="btn-confirm" onclick="enviarDados()">Sim, Agendar</button>
+        <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+    </div>
+
+    <div id="toast">Aviso</div>
+
+    <script>
+        // --- FUNÇÕES DE UX DO FORMULÁRIO (MÁSCARA E EXIBIÇÃO DO CPF) ---
+        function alternarCPF() {
+            let clienteResposta = document.querySelector('input[name="ja_cliente"]:checked').value;
+            let grupoCpf = document.getElementById('grupo_cpf');
+            let inputCpf = document.getElementById('cpf');
+            
+            if (clienteResposta === "Sim") {
+                grupoCpf.style.display = "block"; // Mostra o CPF
+            } else {
+                grupoCpf.style.display = "none";  // Esconde
+                inputCpf.value = ""; // Limpa o campo caso ele mude de ideia
+            }
+        }
+
+        function mascaraCPF(i) {
+            let v = i.value.replace(/\D/g, ""); // Remove tudo o que não é dígito
+            v = v.replace(/(\d{3})(\d)/, "$1.$2"); // Coloca o primeiro ponto
+            v = v.replace(/(\d{3})(\d)/, "$1.$2"); // Coloca o segundo ponto
+            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); // Coloca o traço
+            i.value = v;
+        }
+
+        // --- INICIALIZAÇÃO DO CALENDÁRIO ---
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                locale: 'pt-br',
+                buttonText: { today: 'Hoje', month: 'Mês', week: 'Semana', day: 'Dia' },
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'timeGridWeek,timeGridDay'
+                },
+                slotMinTime: "10:00:00",
+                slotMaxTime: "16:00:00",
+                slotDuration: "00:30:00",
+                slotLabelInterval: "00:30",
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', omitZeroMinute: false },
+                allDaySlot: false,
+                hiddenDays: [0, 6],
+                expandRows: true,
+                height: 'auto',
+
+                // Lógica de busca de Eventos do n8n mantida
+                events: function (fetchInfo, successCallback, failureCallback) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const codProcesso = urlParams.get('cod');
+
+                    let n8nUrl = 'https://driver-manufactured-temp-predicted.trycloudflare.com/webhook/997bc547-417e-4e46-8b2c-003b2c4be1b8';
+                    if (codProcesso) { n8nUrl += `?cod=${codProcesso}`; }
+
+                    fetch(n8nUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            let todosEventosRaw = data && Array.isArray(data) ? data : [];
+                            let dataIteracao = new Date(fetchInfo.start);
+                            let dataFim = new Date(fetchInfo.end);
+
+                            // Injeta o almoço
+                            while (dataIteracao < dataFim) {
+                                let diaSemana = dataIteracao.getDay();
+                                if (diaSemana !== 0 && diaSemana !== 6) {
+                                    let almocoStart = new Date(dataIteracao);
+                                    almocoStart.setHours(12, 0, 0, 0);
+                                    let almocoEnd = new Date(dataIteracao);
+                                    almocoEnd.setHours(13, 0, 0, 0);
+
+                                    todosEventosRaw.push({
+                                        start: almocoStart.toISOString(),
+                                        end: almocoEnd.toISOString(),
+                                        title: "Pausa Almoço",
+                                        display: 'background',
+                                        color: '#ff9f89'
+                                    });
+                                }
+                                dataIteracao.setDate(dataIteracao.getDate() + 1);
+                            }
+
+                            // Ordena e mescla
+                            let eventosOrdenados = todosEventosRaw.sort((a, b) => new Date(a.start) - new Date(b.start));
+                            let eventosMesclados = [];
+
+                            eventosOrdenados.forEach(ev => {
+                                let atualStart = new Date(ev.start);
+                                let atualEnd = new Date(ev.end);
+                                let tituloAtual = ev.title || "Indisponível";
+
+                                if (eventosMesclados.length === 0) {
+                                    eventosMesclados.push({ start: atualStart.toISOString(), end: atualEnd.toISOString(), title: tituloAtual });
+                                } else {
+                                    let ultimo = eventosMesclados[eventosMesclados.length - 1];
+                                    let ultimoEnd = new Date(ultimo.end);
+
+                                    if (atualStart <= ultimoEnd) {
+                                        if (atualEnd > ultimoEnd) ultimo.end = atualEnd.toISOString();
+                                        ultimo.title = "Indisponível";
+                                    } else {
+                                        eventosMesclados.push({ start: atualStart.toISOString(), end: atualEnd.toISOString(), title: tituloAtual });
+                                    }
+                                }
+                            });
+
+                            successCallback(eventosMesclados);
+                        })
+                        .catch(error => {
+                            console.error('Erro ao buscar agenda:', error);
+                            failureCallback(error);
+                        });
+                },
+
+                eventContent: function (arg) {
+                    let texto = arg.event.title || 'Indisponível';
+                    let classeExtra = (texto === "Pausa Almoço") ? "badge-almoco" : "";
+                    return { html: `<div class="ocupado-badge ${classeExtra}">${texto}</div>` };
+                },
+
+                // CLIQUE NO HORÁRIO LIVRE (Validação Atualizada)
+                dateClick: function (info) {
+                    let isCliente = document.querySelector('input[name="ja_cliente"]:checked');
+                    let demanda = document.getElementById('demanda').value;
+                    let relato = document.getElementById('relato').value.trim();
+                    let cpf = document.getElementById('cpf').value.trim();
+
+                    // Valida se respondeu à primeira pergunta
+                    if (!isCliente) {
+                        mostrarToast("⚠️ Responda se você já é cliente no Passo 1.");
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        return;
+                    }
+
+                    // Se marcou que É cliente, exige o CPF com tamanho correto
+                    if (isCliente.value === "Sim" && cpf.length < 14) {
+                        mostrarToast("⚠️ Por favor, informe um CPF válido para localizarmos seu processo.");
+                        document.getElementById('cpf').focus();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        return;
+                    }
+
+                    // Valida se preencheu Demanda e Relato
+                    if (!demanda || !relato) {
+                        mostrarToast("⚠️ Por favor, preencha a Demanda e o Relato antes de escolher o horário.");
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        return;
+                    }
+
+                    abrirModal(info.dateStr, demanda);
+                },
+
+                eventClick: function (info) {
+                    info.jsEvent.preventDefault();
+                    info.jsEvent.stopPropagation();
+                    mostrarToast("🔒 Esse horário já está ocupado. Por favor, escolha outro.");
+                }
+            });
+
+            calendar.render();
+        });
+
+        // --- FUNÇÕES GLOBAIS ---
+        let dataAtualSelecionada = '';
+
+        function abrirModal(dataISO, demanda) {
+            dataAtualSelecionada = dataISO;
+            let dataObj = new Date(dataISO);
+
+            let opcoesData = { weekday: 'long', day: 'numeric', month: 'long' };
+            let opcoesHora = { hour: '2-digit', minute: '2-digit' };
+            let formatada = dataObj.toLocaleDateString('pt-BR', opcoesData) + ' às ' + dataObj.toLocaleTimeString('pt-BR', opcoesHora);
+            formatada = formatada.charAt(0).toUpperCase() + formatada.slice(1);
+
+            document.getElementById('resumo-demanda').innerText = demanda;
+            document.getElementById('data-selecionada').innerText = formatada;
+
+            document.getElementById('modal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function fecharModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function mostrarToast(mensagem) {
+            let toast = document.getElementById("toast");
+            toast.innerText = mensagem;
+            toast.classList.add("show");
+            setTimeout(function () { toast.classList.remove("show"); }, 3500);
+        }
+
+        // --- FUNÇÃO FINAL DE ENVIO ---
+        // --- FUNÇÃO FINAL DE ENVIO (ATUALIZADA) ---
+        function enviarDados() {
+            let clienteResposta = document.querySelector('input[name="ja_cliente"]:checked').value;
+            let demandaResposta = document.getElementById('demanda').value;
+            let relatoResposta = document.getElementById('relato').value;
+            let cpfResposta = document.getElementById('cpf').value;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const emailDoCliente = urlParams.get('email');
+
+            let payload = {
+                data_agendamento: dataAtualSelecionada,
+                ja_e_cliente: clienteResposta,
+                cpf: (clienteResposta === "Sim") ? cpfResposta : null,
+                area_demanda: demandaResposta,
+                relato: relatoResposta,
+                email: emailDoCliente
+            };
+
+            let btnConfirmar = document.querySelector('.btn-confirm');
+            let textoOriginal = btnConfirmar.innerText;
+            btnConfirmar.innerText = "⏳ Agendando...";
+            btnConfirmar.disabled = true;
+
+            let urlWebhook = 'https://driver-manufactured-temp-predicted.trycloudflare.com/webhook/aaa05a4c-0b2b-40d1-995c-4c24480cceac';
+
+            fetch(urlWebhook, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(async response => {
+                    // Tenta ler o JSON de resposta que o n8n enviou
+                    let dadosN8n = {};
+                    try {
+                        dadosN8n = await response.json();
+                    } catch (e) {
+                        console.log("n8n não retornou JSON.");
+                    }
+
+                    // Se o status for 200 (Sucesso)
+                    if (response.ok) {
+                        fecharModal();
+                        document.querySelector('.card-container:nth-child(2)').innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <h2 style="color: #2b8a3e; font-size: 2.2em; margin-bottom: 10px;">✅ Agendamento Confirmado!</h2>
+                            <p style="font-size: 1.1em; color: #495057;">Sua solicitação para o dia e horário selecionados foi registrada com sucesso.</p>
+                            <p style="font-size: 1em; color: #868e96; margin-top: 20px;">Nossa equipe entrará em contato em breve.</p>
+                        </div>
+                    `;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } 
+                    // Se o status for 400 (Erro que criamos no n8n)
+                    else {
+                        // Puxa a mensagem personalizada do n8n, ou uma genérica se falhar
+                        let msgErro = dadosN8n.mensagem || "Ocorreu um erro ao validar seus dados.";
+                        mostrarToast("⚠️ " + msgErro);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro no disparo do Webhook:", error);
+                    mostrarToast("❌ Erro de conexão. Verifique se o sistema está online.");
+                })
+                .finally(() => {
+                    btnConfirmar.innerText = textoOriginal;
+                    btnConfirmar.disabled = false;
+                });
+        }
+    </script>
+
+</body>
+
+</html>
